@@ -24,7 +24,7 @@ public class AnidbRateLimitSettings
     [Badge("Debug", Theme = DisplayColorTheme.Warning)]
     [Visibility(Size = DisplayElementSize.Small, Advanced = true)]
     [Range(2, 99)]
-    public int SlowRateMultiplier { get; set; } = 3;
+    public int SlowRateMultiplier { get; set; } = 2;
 
     /// <summary>
     /// Slow rate period multiplier applied to the <seealso cref="BaseRateInSeconds">Base Rate</seealso>.
@@ -50,5 +50,5 @@ public class AnidbRateLimitSettings
     [Visibility(Size = DisplayElementSize.Small, Advanced = true)]
     [Display(Name = "Safety Headroom (milliseconds)")]
     [Range(0, 5000)]
-    public int SafetyHeadroomInMilliseconds { get; set; } = 250;
+    public int SafetyHeadroomInMilliseconds { get; set; } = 500;
 }
