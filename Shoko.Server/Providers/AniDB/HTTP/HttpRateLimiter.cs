@@ -72,6 +72,8 @@ public class HttpRateLimiter
 
     private long? _resetPeriod;
 
+    private int? _safetyHeadroom;
+
     // Switch to shorter delay after inactivity
     private long ResetPeriod
     {
@@ -103,6 +105,7 @@ public class HttpRateLimiter
             _longDelay = baseRate * settings.SlowRateMultiplier;
             _shortPeriod = baseRate * settings.SlowRatePeriodMultiplier;
             _resetPeriod = baseRate * settings.ResetPeriodMultiplier;
+            _safetyHeadroom = settings.SafetyHeadroomInMilliseconds;
         }
     }
 
@@ -134,6 +137,22 @@ public class HttpRateLimiter
         _logger.LogTrace("Rate is reset. Active time was {Time} ms", elapsedTime);
     }
 
+    public TimeSpan GetTimeUntilAvailable(bool forceShortDelay = false)
+    {
+        if (_lock.CurrentCount == 0)
+            return TimeSpan.FromMilliseconds(100);
+
+        var delay = _requestWatch.ElapsedMilliseconds;
+        if (delay > ResetPeriod)
+            return TimeSpan.Zero;
+
+        var currentDelay = !forceShortDelay && _activeTimeWatch.ElapsedMilliseconds > ShortPeriod ? LongDelay : ShortDelay;
+        if (delay > currentDelay)
+            return TimeSpan.Zero;
+
+        return TimeSpan.FromMilliseconds(currentDelay - delay + _safetyHeadroom!.Value);
+    }
+
     public async Task<T> EnsureRate<T>(Func<Task<T>> action, bool forceShortDelay = false)
     {
         await _lock.WaitAsync();
@@ -150,8 +169,7 @@ public class HttpRateLimiter
                 return await action();
             }
 
-            // add 50ms for good measure
-            var waitTime = currentDelay - (int)delay + 50;
+            var waitTime = currentDelay - (int)delay + _safetyHeadroom!.Value;
 
             _logger.LogTrace("Time since last request is {Delay} ms, throttling for {Time}ms", delay, waitTime);
             await Task.Delay(waitTime);

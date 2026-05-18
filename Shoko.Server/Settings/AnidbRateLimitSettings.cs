@@ -41,4 +41,14 @@ public class AnidbRateLimitSettings
     [Visibility(Size = DisplayElementSize.Small, Advanced = true)]
     [Range(2, 99)]
     public int ResetPeriodMultiplier { get; set; } = 60;
+
+    /// <summary>
+    /// Extra time added after the calculated provider limit before another
+    /// request is allowed.
+    /// </summary>
+    [Badge("Debug", Theme = DisplayColorTheme.Warning)]
+    [Visibility(Size = DisplayElementSize.Small, Advanced = true)]
+    [Display(Name = "Safety Headroom (milliseconds)")]
+    [Range(0, 5000)]
+    public int SafetyHeadroomInMilliseconds { get; set; } = 250;
 }

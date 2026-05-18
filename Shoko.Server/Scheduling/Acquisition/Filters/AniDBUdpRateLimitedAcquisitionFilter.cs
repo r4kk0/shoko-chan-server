@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Quartz;
-using Quartz.Util;
 using Shoko.Server.Providers.AniDB;
 using Shoko.Server.Providers.AniDB.Interfaces;
-using Shoko.Server.Scheduling.Acquisition.Attributes;
 using Shoko.Server.Scheduling.Jobs.Shoko;
 using Shoko.Abstractions.Video.Services;
 using Shoko.Abstractions.Core.Services;
+using Shoko.Server.Scheduling.ResourceLimits;
 
 namespace Shoko.Server.Scheduling.Acquisition.Filters;
 
-public class AniDBUdpRateLimitedAcquisitionFilter : IAcquisitionFilter
+public class AniDBUdpRateLimitedAcquisitionFilter : ResourceLimitedAcquisitionFilter
 {
     private readonly Type[] _typesWithoutProcessJob;
 
@@ -28,7 +26,7 @@ public class AniDBUdpRateLimitedAcquisitionFilter : IAcquisitionFilter
 
     private readonly IVideoReleaseService _videoReleaseService;
 
-    public AniDBUdpRateLimitedAcquisitionFilter(IUDPConnectionHandler connectionHandler, ISystemService systemService, IVideoReleaseService videoReleaseService)
+    public AniDBUdpRateLimitedAcquisitionFilter(IUDPConnectionHandler connectionHandler, AniDBUdpResourceLimit resourceLimit, ISystemService systemService, IVideoReleaseService videoReleaseService) : base(resourceLimit)
     {
         _connectionHandler = connectionHandler;
         _systemService = systemService;
@@ -39,8 +37,7 @@ public class AniDBUdpRateLimitedAcquisitionFilter : IAcquisitionFilter
         _processJobIncluded = true;
         _ready = false;
 
-        _typesWithProcessJob = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes()).Where(a =>
-            typeof(IJob).IsAssignableFrom(a) && !a.IsAbstract && ObjectUtils.IsAttributePresent(a, typeof(AniDBUdpRateLimitedAttribute))).ToArray();
+        _typesWithProcessJob = GetJobTypesForResource(SchedulerResource.AniDBUdp);
         _typesWithoutProcessJob = _typesWithProcessJob.Where(a => !typeof(ProcessFileJob).IsAssignableFrom(a)).ToArray();
     }
 
@@ -55,24 +52,24 @@ public class AniDBUdpRateLimitedAcquisitionFilter : IAcquisitionFilter
     {
         _ready = true;
         _processJobIncluded = _videoReleaseService.GetAvailableProviders(onlyEnabled: true).Any(a => a.Provider.Name is "AniDB");
-        StateChanged?.Invoke(null, EventArgs.Empty);
+        NotifyStateChanged();
     }
 
     private void OnProvidersUpdated(object sender, EventArgs e)
     {
         if (!_ready) return;
         _processJobIncluded = _videoReleaseService.GetAvailableProviders(onlyEnabled: true).Any(a => a.Provider.Name is "AniDB");
-        StateChanged?.Invoke(null, EventArgs.Empty);
+        NotifyStateChanged();
     }
 
     private void OnAniDBStateUpdate(object sender, AniDBStateUpdate e)
     {
-        StateChanged?.Invoke(null, EventArgs.Empty);
+        NotifyStateChanged();
     }
 
-    public IEnumerable<Type> GetTypesToExclude() => !_connectionHandler.IsAlive || _connectionHandler.IsBanned || _connectionHandler.IsInvalidSession
-        ? _processJobIncluded ? _typesWithProcessJob : _typesWithoutProcessJob
-        : [];
+    protected override IEnumerable<Type> GetResourceLimitedTypes() => _processJobIncluded ? _typesWithProcessJob : _typesWithoutProcessJob;
 
-    public event EventHandler StateChanged;
+    protected override IEnumerable<Type> GetStateBlockedTypes() => !_connectionHandler.IsAlive || _connectionHandler.IsBanned || _connectionHandler.IsInvalidSession
+        ? GetResourceLimitedTypes()
+        : [];
 }

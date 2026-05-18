@@ -71,6 +71,8 @@ public class UDPRateLimiter
 
     private long? _resetPeriod;
 
+    private int? _safetyHeadroom;
+
     // Switch to shorter delay after inactivity
     private long ResetPeriod
     {
@@ -102,6 +104,7 @@ public class UDPRateLimiter
             _longDelay = baseRate * settings.SlowRateMultiplier;
             _shortPeriod = baseRate * settings.SlowRatePeriodMultiplier;
             _resetPeriod = baseRate * settings.ResetPeriodMultiplier;
+            _safetyHeadroom = settings.SafetyHeadroomInMilliseconds;
         }
     }
 
@@ -133,6 +136,29 @@ public class UDPRateLimiter
         _logger.LogTrace("Rate is reset. Active time was {Time} ms", elapsedTime);
     }
 
+    public TimeSpan GetTimeUntilAvailable(bool forceShortDelay = false)
+    {
+        if (!Monitor.TryEnter(_lock))
+            return TimeSpan.FromMilliseconds(100);
+
+        try
+        {
+            var delay = _requestWatch.ElapsedMilliseconds;
+            if (delay > ResetPeriod)
+                return TimeSpan.Zero;
+
+            var currentDelay = !forceShortDelay && _activeTimeWatch.ElapsedMilliseconds > ShortPeriod ? LongDelay : ShortDelay;
+            if (delay > currentDelay)
+                return TimeSpan.Zero;
+
+            return TimeSpan.FromMilliseconds(currentDelay - delay + _safetyHeadroom!.Value);
+        }
+        finally
+        {
+            Monitor.Exit(_lock);
+        }
+    }
+
     public T EnsureRate<T>(Func<T> action, bool forceShortDelay = false)
     {
         lock (_lock)
@@ -149,8 +175,7 @@ public class UDPRateLimiter
                     return action();
                 }
 
-                // add 50ms for good measure
-                var waitTime = currentDelay - (int)delay + 50;
+                var waitTime = currentDelay - (int)delay + _safetyHeadroom!.Value;
 
                 _logger.LogTrace("Time since last request is {Delay} ms, throttling for {Time}ms", delay, waitTime);
                 Thread.Sleep(waitTime);

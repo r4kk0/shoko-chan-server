@@ -20,6 +20,7 @@ using Shoko.Server.Scheduling.Jobs;
 using Shoko.Server.Scheduling.Jobs.Actions;
 using Shoko.Server.Scheduling.Jobs.Shoko;
 using Shoko.Server.Scheduling.Jobs.Trakt;
+using Shoko.Server.Scheduling.ResourceLimits;
 using Shoko.Server.Server;
 using Shoko.Server.Utilities;
 
@@ -98,6 +99,10 @@ public static class QuartzStartup
             (ThreadPooledJobStore)s.GetServices<IJobStore>().FirstOrDefault(a => a.GetType() == typeof(ThreadPooledJobStore)));
         services.AddSingleton<QueueHandler>();
         services.AddSingleton<QueueStateEventHandler>();
+        services.AddSingleton<AniDBHttpResourceLimit>();
+        services.AddSingleton<AniDBUdpResourceLimit>();
+        services.AddSingleton<ISchedulerResourceLimit>(s => s.GetRequiredService<AniDBHttpResourceLimit>());
+        services.AddSingleton<ISchedulerResourceLimit>(s => s.GetRequiredService<AniDBUdpResourceLimit>());
         services.AddSingleton<IAcquisitionFilter, AniDBHttpRateLimitedAcquisitionFilter>();
         services.AddSingleton<IAcquisitionFilter, AniDBUdpRateLimitedAcquisitionFilter>();
         services.AddSingleton<IAcquisitionFilter, DatabaseRequiredAcquisitionFilter>();
