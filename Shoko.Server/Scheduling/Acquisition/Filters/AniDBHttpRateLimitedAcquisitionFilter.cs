@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using Shoko.Server.Providers.AniDB;
 using Shoko.Server.Providers.AniDB.Interfaces;
-using Shoko.Server.Scheduling.ResourceLimits;
+using Shoko.Server.Scheduling.ResourceGovernance;
 
 namespace Shoko.Server.Scheduling.Acquisition.Filters;
 
-public class AniDBHttpRateLimitedAcquisitionFilter : ResourceLimitedAcquisitionFilter
+public class AniDBHttpRateLimitedAcquisitionFilter : ResourceGatedAcquisitionFilter
 {
     private readonly Type[] _types;
     private readonly IHttpConnectionHandler _connectionHandler;

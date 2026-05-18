@@ -4,24 +4,24 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Quartz;
-using Shoko.Server.Scheduling.ResourceLimits;
+using Shoko.Server.Scheduling.ResourceGovernance;
 
 #nullable enable
 namespace Shoko.Server.Scheduling.Acquisition.Filters;
 
-public abstract class ResourceLimitedAcquisitionFilter : IAcquisitionFilter
+public abstract class ResourceGatedAcquisitionFilter : IAcquisitionFilter
 {
     private readonly object _timerLock = new();
     private readonly ISchedulerResourceLimit _resourceLimit;
     private Timer? _resourceTimer;
     private DateTimeOffset? _resourceSignalAt;
 
-    protected ResourceLimitedAcquisitionFilter(ISchedulerResourceLimit resourceLimit)
+    protected ResourceGatedAcquisitionFilter(ISchedulerResourceLimit resourceLimit)
     {
         _resourceLimit = resourceLimit;
     }
 
-    ~ResourceLimitedAcquisitionFilter()
+    ~ResourceGatedAcquisitionFilter()
     {
         _resourceTimer?.Dispose();
     }

@@ -1,7 +1,7 @@
 using System;
 using Shoko.Server.Providers.AniDB.HTTP;
 
-namespace Shoko.Server.Scheduling.ResourceLimits;
+namespace Shoko.Server.Scheduling.ResourceGovernance;
 
 public class AniDBHttpResourceLimit(HttpRateLimiter rateLimiter) : ISchedulerResourceLimit
 {

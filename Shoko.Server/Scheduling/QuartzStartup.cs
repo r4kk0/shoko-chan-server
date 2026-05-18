@@ -20,7 +20,7 @@ using Shoko.Server.Scheduling.Jobs;
 using Shoko.Server.Scheduling.Jobs.Actions;
 using Shoko.Server.Scheduling.Jobs.Shoko;
 using Shoko.Server.Scheduling.Jobs.Trakt;
-using Shoko.Server.Scheduling.ResourceLimits;
+using Shoko.Server.Scheduling.ResourceGovernance;
 using Shoko.Server.Server;
 using Shoko.Server.Utilities;
 

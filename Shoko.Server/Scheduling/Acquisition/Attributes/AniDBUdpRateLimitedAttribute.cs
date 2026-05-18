@@ -1,5 +1,5 @@
 using System;
-using Shoko.Server.Scheduling.ResourceLimits;
+using Shoko.Server.Scheduling.ResourceGovernance;
 
 namespace Shoko.Server.Scheduling.Acquisition.Attributes;
 

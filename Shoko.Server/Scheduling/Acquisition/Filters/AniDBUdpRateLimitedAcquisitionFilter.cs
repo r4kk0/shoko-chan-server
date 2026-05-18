@@ -6,11 +6,11 @@ using Shoko.Server.Providers.AniDB.Interfaces;
 using Shoko.Server.Scheduling.Jobs.Shoko;
 using Shoko.Abstractions.Video.Services;
 using Shoko.Abstractions.Core.Services;
-using Shoko.Server.Scheduling.ResourceLimits;
+using Shoko.Server.Scheduling.ResourceGovernance;
 
 namespace Shoko.Server.Scheduling.Acquisition.Filters;
 
-public class AniDBUdpRateLimitedAcquisitionFilter : ResourceLimitedAcquisitionFilter
+public class AniDBUdpRateLimitedAcquisitionFilter : ResourceGatedAcquisitionFilter
 {
     private readonly Type[] _typesWithoutProcessJob;
 

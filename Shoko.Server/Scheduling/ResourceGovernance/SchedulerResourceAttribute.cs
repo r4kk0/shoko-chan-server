@@ -1,7 +1,7 @@
 using System;
 using Shoko.Server.Scheduling.Acquisition.Attributes;
 
-namespace Shoko.Server.Scheduling.ResourceLimits;
+namespace Shoko.Server.Scheduling.ResourceGovernance;
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class SchedulerResourceAttribute(SchedulerResource resource) : NetworkRequiredAttribute

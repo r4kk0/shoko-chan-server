@@ -1,4 +1,4 @@
-namespace Shoko.Server.Scheduling.ResourceLimits;
+namespace Shoko.Server.Scheduling.ResourceGovernance;
 
 public enum SchedulerResource
 {
