@@ -6,6 +6,7 @@ using System.Threading;
 using Quartz;
 using Shoko.Server.Scheduling.ResourceLimits;
 
+#nullable enable
 namespace Shoko.Server.Scheduling.Acquisition.Filters;
 
 public abstract class ResourceLimitedAcquisitionFilter : IAcquisitionFilter
@@ -75,5 +76,5 @@ public abstract class ResourceLimitedAcquisitionFilter : IAcquisitionFilter
         }
     }
 
-    public event EventHandler StateChanged;
+    public event EventHandler? StateChanged;
 }
