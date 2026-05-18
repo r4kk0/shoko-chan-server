@@ -1,6 +1,6 @@
 using System;
 
-namespace Shoko.Server.Scheduling.Acquisition.Attributes;
+namespace Shoko.Server.Scheduling.Dispatch.Attributes;
 
 [AttributeUsage(AttributeTargets.Class)]
 public class DatabaseRequiredAttribute : AcquisitionFilterAttribute { }

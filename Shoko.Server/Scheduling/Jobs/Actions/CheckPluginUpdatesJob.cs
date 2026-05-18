@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Shoko.Abstractions.Plugin;
-using Shoko.Server.Scheduling.Acquisition.Attributes;
+using Shoko.Server.Scheduling.Dispatch.Attributes;
 using Shoko.Server.Scheduling.Attributes;
 
 #pragma warning disable CS8618

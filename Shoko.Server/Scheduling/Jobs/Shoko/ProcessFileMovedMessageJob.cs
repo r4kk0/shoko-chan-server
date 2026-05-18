@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Shoko.Abstractions.Video.Services;
 using Shoko.Server.Providers.AniDB.Release;
 using Shoko.Server.Repositories;
-using Shoko.Server.Scheduling.Acquisition.Attributes;
+using Shoko.Server.Scheduling.Dispatch.Attributes;
 using Shoko.Server.Scheduling.Attributes;
 
 namespace Shoko.Server.Scheduling.Jobs.Shoko;

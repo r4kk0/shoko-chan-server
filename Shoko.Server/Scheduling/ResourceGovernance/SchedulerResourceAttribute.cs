@@ -1,5 +1,5 @@
 using System;
-using Shoko.Server.Scheduling.Acquisition.Attributes;
+using Shoko.Server.Scheduling.Dispatch.Attributes;
 
 namespace Shoko.Server.Scheduling.ResourceGovernance;
 

@@ -12,7 +12,7 @@ using Quartz;
 using Quartz.Spi;
 using Quartz.Util;
 using Shoko.Abstractions.Core.Services;
-using Shoko.Server.Scheduling.Acquisition.Filters;
+using Shoko.Server.Scheduling.Dispatch.Filters;
 using Shoko.Server.Scheduling.Attributes;
 using Shoko.Server.Scheduling.Delegates;
 using Shoko.Server.Scheduling.GenericJobBuilder;
@@ -21,6 +21,7 @@ using Shoko.Server.Scheduling.Jobs.Actions;
 using Shoko.Server.Scheduling.Jobs.Shoko;
 using Shoko.Server.Scheduling.Jobs.Trakt;
 using Shoko.Server.Scheduling.ResourceGovernance;
+using Shoko.Server.Scheduling.ResourceGovernance.Limits;
 using Shoko.Server.Server;
 using Shoko.Server.Utilities;
 

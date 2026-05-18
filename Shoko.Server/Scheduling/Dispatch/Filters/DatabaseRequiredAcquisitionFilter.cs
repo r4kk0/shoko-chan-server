@@ -4,9 +4,9 @@ using System.Linq;
 using Quartz;
 using Quartz.Util;
 using Shoko.Abstractions.Core.Services;
-using Shoko.Server.Scheduling.Acquisition.Attributes;
+using Shoko.Server.Scheduling.Dispatch.Attributes;
 
-namespace Shoko.Server.Scheduling.Acquisition.Filters;
+namespace Shoko.Server.Scheduling.Dispatch.Filters;
 
 public class DatabaseRequiredAcquisitionFilter : IAcquisitionFilter
 {

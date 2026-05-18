@@ -5,7 +5,7 @@ using Quartz;
 using Shoko.Abstractions.Video.Services;
 using Shoko.Server.Models.Shoko;
 using Shoko.Server.Repositories;
-using Shoko.Server.Scheduling.Acquisition.Attributes;
+using Shoko.Server.Scheduling.Dispatch.Attributes;
 using Shoko.Server.Scheduling.Attributes;
 
 #pragma warning disable CS8618

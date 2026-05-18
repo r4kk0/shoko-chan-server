@@ -7,7 +7,7 @@ using Quartz;
 using Shoko.Server.Scheduling.ResourceGovernance;
 
 #nullable enable
-namespace Shoko.Server.Scheduling.Acquisition.Filters;
+namespace Shoko.Server.Scheduling.Dispatch.Filters;
 
 public abstract class ResourceGatedAcquisitionFilter : IAcquisitionFilter
 {

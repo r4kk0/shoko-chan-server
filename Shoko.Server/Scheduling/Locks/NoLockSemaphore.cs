@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Quartz.Impl.AdoJobStore;
 
-namespace Shoko.Server.Scheduling.DatabaseLocks;
+namespace Shoko.Server.Scheduling.Locks;
 
 public class NoLockSemaphore : ISemaphore
 {

@@ -7,8 +7,9 @@ using Shoko.Server.Scheduling.Jobs.Shoko;
 using Shoko.Abstractions.Video.Services;
 using Shoko.Abstractions.Core.Services;
 using Shoko.Server.Scheduling.ResourceGovernance;
+using Shoko.Server.Scheduling.ResourceGovernance.Limits;
 
-namespace Shoko.Server.Scheduling.Acquisition.Filters;
+namespace Shoko.Server.Scheduling.Dispatch.Filters;
 
 public class AniDBUdpRateLimitedAcquisitionFilter : ResourceGatedAcquisitionFilter
 {

@@ -12,7 +12,7 @@ using Quartz.Impl.AdoJobStore;
 using Quartz.Spi;
 using Shoko.Abstractions.Core.Services;
 using Shoko.Abstractions.Video.Services;
-using Shoko.Server.Scheduling.Acquisition.Filters;
+using Shoko.Server.Scheduling.Dispatch.Filters;
 using Shoko.Server.Scheduling.Concurrency;
 using Shoko.Server.Scheduling.Delegates;
 using Shoko.Server.Scheduling.Jobs.Shoko;

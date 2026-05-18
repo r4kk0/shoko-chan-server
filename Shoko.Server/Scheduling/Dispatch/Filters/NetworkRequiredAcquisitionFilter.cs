@@ -5,10 +5,10 @@ using Quartz;
 using Quartz.Util;
 using Shoko.Abstractions.Connectivity.Enums;
 using Shoko.Abstractions.Connectivity.Services;
-using Shoko.Server.Scheduling.Acquisition.Attributes;
+using Shoko.Server.Scheduling.Dispatch.Attributes;
 
 #nullable enable
-namespace Shoko.Server.Scheduling.Acquisition.Filters;
+namespace Shoko.Server.Scheduling.Dispatch.Filters;
 
 public class NetworkRequiredAcquisitionFilter : IAcquisitionFilter
 {

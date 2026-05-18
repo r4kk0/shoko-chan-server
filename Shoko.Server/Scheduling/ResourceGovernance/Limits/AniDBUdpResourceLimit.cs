@@ -1,7 +1,7 @@
 using System;
 using Shoko.Server.Providers.AniDB.UDP;
 
-namespace Shoko.Server.Scheduling.ResourceGovernance;
+namespace Shoko.Server.Scheduling.ResourceGovernance.Limits;
 
 public class AniDBUdpResourceLimit(UDPRateLimiter rateLimiter) : ISchedulerResourceLimit
 {

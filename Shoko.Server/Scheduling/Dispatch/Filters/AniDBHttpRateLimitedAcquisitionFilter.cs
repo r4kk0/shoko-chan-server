@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using Shoko.Server.Providers.AniDB;
 using Shoko.Server.Providers.AniDB.Interfaces;
 using Shoko.Server.Scheduling.ResourceGovernance;
+using Shoko.Server.Scheduling.ResourceGovernance.Limits;
 
-namespace Shoko.Server.Scheduling.Acquisition.Filters;
+namespace Shoko.Server.Scheduling.Dispatch.Filters;
 
 public class AniDBHttpRateLimitedAcquisitionFilter : ResourceGatedAcquisitionFilter
 {
