@@ -13,6 +13,8 @@ using Shoko.Server.Providers.AniDB.Interfaces;
 using Shoko.Server.Providers.AniDB.UDP.Connection;
 using Shoko.Server.Providers.AniDB.UDP.Exceptions;
 using Shoko.Server.Providers.AniDB.UDP.Generic;
+using Shoko.Server.Scheduling.ResourceGovernance;
+using Shoko.Server.Scheduling.ResourceGovernance.Calibration;
 using Shoko.Server.Server;
 using Shoko.Server.Settings;
 
@@ -34,6 +36,7 @@ public partial class AniDBUDPConnectionHandler : ConnectionHandler, IUDPConnecti
     private const int LogoutPeriod = 5 * 60 * 1000;
     private readonly IRequestFactory _requestFactory;
     private readonly UDPRateLimiter _rateLimiter;
+    private readonly AniDBLimitCalibrator _calibrator;
     private readonly IConnectivityService _connectivityService;
     private AniDBSocketHandler? _socketHandler;
     private readonly object _socketHandlerLock = new();
@@ -89,6 +92,7 @@ public partial class AniDBUDPConnectionHandler : ConnectionHandler, IUDPConnecti
             {
                 _isLoggedOn = false;
                 SessionID = null;
+                _calibrator.RecordBan(SchedulerResource.AniDBUdp, DateTime.Now.AddHours(BanTimerResetLength));
             }
 
             IsInvalidSession = false;
@@ -99,11 +103,18 @@ public partial class AniDBUDPConnectionHandler : ConnectionHandler, IUDPConnecti
 
     public bool IsNetworkAvailable { private set; get; }
 
-    public AniDBUDPConnectionHandler(IRequestFactory requestFactory, ILoggerFactory loggerFactory, ISettingsProvider settings, UDPRateLimiter rateLimiter, IConnectivityService connectivityService) :
+    public AniDBUDPConnectionHandler(
+        IRequestFactory requestFactory,
+        ILoggerFactory loggerFactory,
+        ISettingsProvider settings,
+        UDPRateLimiter rateLimiter,
+        AniDBLimitCalibrator calibrator,
+        IConnectivityService connectivityService) :
         base(loggerFactory)
     {
         _requestFactory = requestFactory;
         _rateLimiter = rateLimiter;
+        _calibrator = calibrator;
         _connectivityService = connectivityService;
         SettingsProvider = settings;
     }
@@ -116,6 +127,7 @@ public partial class AniDBUDPConnectionHandler : ConnectionHandler, IUDPConnecti
 
     void IUDPConnectionHandler.StartBackoffTimer(int time, string message)
     {
+        _calibrator.RecordThrottle(SchedulerResource.AniDBUdp, TimeSpan.FromSeconds(time), message);
         base.StartBackoffTimer(time, message);
     }
 

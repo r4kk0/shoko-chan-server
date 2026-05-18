@@ -1,10 +1,14 @@
 using System;
 using System.Diagnostics;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Shoko.Abstractions.Config;
 using Shoko.Abstractions.Config.Events;
+using Shoko.Server.Scheduling.ResourceGovernance;
+using Shoko.Server.Scheduling.ResourceGovernance.Calibration;
 using Shoko.Server.Settings;
 
 #nullable enable
@@ -24,6 +28,8 @@ public class HttpRateLimiter
     private readonly ConfigurationProvider<ServerSettings> _settingsProvider;
 
     private readonly Func<IServerSettings, AnidbRateLimitSettings> _settingsSelector;
+
+    private readonly AniDBLimitCalibrator _calibrator;
 
     private int? _shortDelay;
 
@@ -109,9 +115,10 @@ public class HttpRateLimiter
         }
     }
 
-    public HttpRateLimiter(ILogger<HttpRateLimiter> logger, ConfigurationProvider<ServerSettings> settingsProvider)
+    public HttpRateLimiter(ILogger<HttpRateLimiter> logger, ConfigurationProvider<ServerSettings> settingsProvider, AniDBLimitCalibrator calibrator)
     {
         _logger = logger;
+        _calibrator = calibrator;
         _requestWatch.Start();
         _activeTimeWatch.Start();
         _settingsProvider = settingsProvider;
@@ -139,18 +146,19 @@ public class HttpRateLimiter
 
     public TimeSpan GetTimeUntilAvailable(bool forceShortDelay = false)
     {
+        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBHttp);
         if (_lock.CurrentCount == 0)
-            return TimeSpan.FromMilliseconds(100);
+            return Max(calibrationDelay, TimeSpan.FromMilliseconds(100));
 
         var delay = _requestWatch.ElapsedMilliseconds;
         if (delay > ResetPeriod)
-            return TimeSpan.Zero;
+            return calibrationDelay;
 
         var currentDelay = !forceShortDelay && _activeTimeWatch.ElapsedMilliseconds > ShortPeriod ? LongDelay : ShortDelay;
         if (delay > currentDelay)
-            return TimeSpan.Zero;
+            return calibrationDelay;
 
-        return TimeSpan.FromMilliseconds(currentDelay - delay + _safetyHeadroom!.Value);
+        return Max(calibrationDelay, TimeSpan.FromMilliseconds(currentDelay - delay + _safetyHeadroom!.Value));
     }
 
     public async Task<T> EnsureRate<T>(Func<Task<T>> action, bool forceShortDelay = false)
@@ -158,6 +166,13 @@ public class HttpRateLimiter
         await _lock.WaitAsync();
         try
         {
+            var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBHttp);
+            if (calibrationDelay > TimeSpan.Zero)
+            {
+                _logger.LogTrace("AniDB HTTP calibration is delaying request for {Delay} ms", calibrationDelay.TotalMilliseconds);
+                await Task.Delay(calibrationDelay);
+            }
+
             var delay = _requestWatch.ElapsedMilliseconds;
             if (delay > ResetPeriod) ResetRate();
             var currentDelay = !forceShortDelay && _activeTimeWatch.ElapsedMilliseconds > ShortPeriod ? LongDelay : ShortDelay;
@@ -166,7 +181,9 @@ public class HttpRateLimiter
             {
                 _logger.LogTrace("Time since last request is {Delay} ms, not throttling", delay);
                 _logger.LogTrace("Sending AniDB command");
-                return await action();
+                var response = await action();
+                _calibrator.RecordSuccess(SchedulerResource.AniDBHttp);
+                return response;
             }
 
             var waitTime = currentDelay - (int)delay + _safetyHeadroom!.Value;
@@ -175,7 +192,19 @@ public class HttpRateLimiter
             await Task.Delay(waitTime);
 
             _logger.LogTrace("Sending AniDB command");
-            return await action();
+            var delayedResponse = await action();
+            _calibrator.RecordSuccess(SchedulerResource.AniDBHttp);
+            return delayedResponse;
+        }
+        catch (AniDBBannedException ex)
+        {
+            _calibrator.RecordBan(SchedulerResource.AniDBHttp, ex.BanExpires);
+            throw;
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable)
+        {
+            _calibrator.RecordThrottle(SchedulerResource.AniDBHttp, null, $"HTTP {(int)ex.StatusCode.Value}");
+            throw;
         }
         finally
         {
@@ -183,4 +212,6 @@ public class HttpRateLimiter
             _lock.Release();
         }
     }
+
+    private static TimeSpan Max(TimeSpan left, TimeSpan right) => left > right ? left : right;
 }

@@ -8,6 +8,7 @@ using Shoko.Server.Providers.AniDB.HTTP;
 using Shoko.Server.Providers.AniDB.Interfaces;
 using Shoko.Server.Providers.AniDB.Titles;
 using Shoko.Server.Providers.AniDB.UDP;
+using Shoko.Server.Scheduling.ResourceGovernance.Calibration;
 using Shoko.Server.Utilities;
 
 namespace Shoko.Server.Providers.AniDB;
@@ -20,6 +21,7 @@ public static class AniDBStartup
         services.AddSingleton<AniDBTitleHelper>();
         services.AddSingleton<AnimeCreator>();
         services.AddSingleton<HttpXmlUtils>();
+        services.AddSingleton<AniDBLimitCalibrator>();
         services.AddSingleton<UDPRateLimiter>();
         services.AddSingleton<HttpRateLimiter>();
         services.AddSingleton<IHttpConnectionHandler, AniDBHttpConnectionHandler>();

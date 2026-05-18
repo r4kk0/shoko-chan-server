@@ -11,6 +11,10 @@ SchedulerResource
     v
 ISchedulerResourceLimit
     |
+    +-- documented/configured rate limit
+    |
+    +-- passive calibration delay
+    |
     v
 Dispatch filter decision
     |
@@ -53,6 +57,9 @@ AniDBHttpResourceLimit
     |
     v
 HttpRateLimiter
+    |
+    v
+AniDBLimitCalibrator
 
 [AniDBUdpRateLimited]
     |
@@ -64,7 +71,12 @@ AniDBUdpResourceLimit
     |
     v
 UDPRateLimiter
+    |
+    v
+AniDBLimitCalibrator
 ```
+
+Calibration observations are passive. AniDB responses, overload backoff, and ban signals can add temporary cooling time, but the scheduler does not probe for higher limits by intentionally exceeding documented guidance.
 
 ## Adding a New Governed Resource
 

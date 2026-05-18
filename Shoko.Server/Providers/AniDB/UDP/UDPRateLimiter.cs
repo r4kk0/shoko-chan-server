@@ -4,6 +4,8 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Shoko.Abstractions.Config;
 using Shoko.Abstractions.Config.Events;
+using Shoko.Server.Scheduling.ResourceGovernance;
+using Shoko.Server.Scheduling.ResourceGovernance.Calibration;
 using Shoko.Server.Settings;
 
 #nullable enable
@@ -23,6 +25,8 @@ public class UDPRateLimiter
     private readonly ConfigurationProvider<ServerSettings> _settingsProvider;
 
     private readonly Func<IServerSettings, AnidbRateLimitSettings> _settingsSelector;
+
+    private readonly AniDBLimitCalibrator _calibrator;
 
     private int? _shortDelay;
 
@@ -108,9 +112,10 @@ public class UDPRateLimiter
         }
     }
 
-    public UDPRateLimiter(ILogger<UDPRateLimiter> logger, ConfigurationProvider<ServerSettings> settingsProvider)
+    public UDPRateLimiter(ILogger<UDPRateLimiter> logger, ConfigurationProvider<ServerSettings> settingsProvider, AniDBLimitCalibrator calibrator)
     {
         _logger = logger;
+        _calibrator = calibrator;
         _requestWatch.Start();
         _activeTimeWatch.Start();
         _settingsProvider = settingsProvider;
@@ -138,20 +143,21 @@ public class UDPRateLimiter
 
     public TimeSpan GetTimeUntilAvailable(bool forceShortDelay = false)
     {
+        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBUdp);
         if (!Monitor.TryEnter(_lock))
-            return TimeSpan.FromMilliseconds(100);
+            return Max(calibrationDelay, TimeSpan.FromMilliseconds(100));
 
         try
         {
             var delay = _requestWatch.ElapsedMilliseconds;
             if (delay > ResetPeriod)
-                return TimeSpan.Zero;
+                return calibrationDelay;
 
             var currentDelay = !forceShortDelay && _activeTimeWatch.ElapsedMilliseconds > ShortPeriod ? LongDelay : ShortDelay;
             if (delay > currentDelay)
-                return TimeSpan.Zero;
+                return calibrationDelay;
 
-            return TimeSpan.FromMilliseconds(currentDelay - delay + _safetyHeadroom!.Value);
+            return Max(calibrationDelay, TimeSpan.FromMilliseconds(currentDelay - delay + _safetyHeadroom!.Value));
         }
         finally
         {
@@ -164,6 +170,13 @@ public class UDPRateLimiter
         lock (_lock)
             try
             {
+                var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBUdp);
+                if (calibrationDelay > TimeSpan.Zero)
+                {
+                    _logger.LogTrace("AniDB UDP calibration is delaying request for {Delay} ms", calibrationDelay.TotalMilliseconds);
+                    Thread.Sleep(calibrationDelay);
+                }
+
                 var delay = _requestWatch.ElapsedMilliseconds;
                 if (delay > ResetPeriod) ResetRate();
                 var currentDelay = !forceShortDelay && _activeTimeWatch.ElapsedMilliseconds > ShortPeriod ? LongDelay : ShortDelay;
@@ -172,7 +185,9 @@ public class UDPRateLimiter
                 {
                     _logger.LogTrace("Time since last request is {Delay} ms, not throttling", delay);
                     _logger.LogTrace("Sending AniDB command");
-                    return action();
+                    var response = action();
+                    _calibrator.RecordSuccess(SchedulerResource.AniDBUdp);
+                    return response;
                 }
 
                 var waitTime = currentDelay - (int)delay + _safetyHeadroom!.Value;
@@ -181,11 +196,20 @@ public class UDPRateLimiter
                 Thread.Sleep(waitTime);
 
                 _logger.LogTrace("Sending AniDB command");
-                return action();
+                var delayedResponse = action();
+                _calibrator.RecordSuccess(SchedulerResource.AniDBUdp);
+                return delayedResponse;
+            }
+            catch (AniDBBannedException ex)
+            {
+                _calibrator.RecordBan(SchedulerResource.AniDBUdp, ex.BanExpires);
+                throw;
             }
             finally
             {
                 _requestWatch.Restart();
             }
     }
+
+    private static TimeSpan Max(TimeSpan left, TimeSpan right) => left > right ? left : right;
 }

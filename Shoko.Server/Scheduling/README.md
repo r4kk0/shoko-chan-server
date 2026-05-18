@@ -32,6 +32,7 @@ Scheduling/
     Filters/           Pre-execution gates.
 
   ResourceGovernance/
+    Calibration/       Passive provider limit observations.
     Limits/            Per-resource hard limit implementations.
     SchedulerResource  Shared resource domains.
 
