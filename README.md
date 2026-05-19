@@ -27,6 +27,10 @@ The current fork has been validated in a shadow/test deployment on a Windows Doc
 - Queue blocking and draining behaviour has been observed during provider activity.
 - The Recently Imported WebUI panel populates after import.
 
+Observed container logs show the behaviour in action: AniDB creator/detail jobs move through the queue while
+`UDPRateLimiter` spaces outbound AniDB UDP commands, blocked jobs remain visible, and queued work drains as provider
+requests complete.
+
 This is still a shadow deployment milestone, not a production-readiness claim. Do not point this fork at live production
 Shoko data until more validation is complete.
 
