@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -21,6 +22,7 @@ using Shoko.Abstractions.User.Services;
 using Shoko.Server.API.v1.Models;
 using Shoko.Server.API.v2.Models.core;
 using Shoko.Server.Models.Shoko;
+using Shoko.Server.Providers.AniDB;
 using Shoko.Server.Providers.AniDB.Interfaces;
 using Shoko.Server.Providers.TraktTV;
 using Shoko.Server.Repositories;
@@ -225,22 +227,36 @@ public class Core : BaseController
     [HttpGet("anidb/test")]
     public ActionResult TestAniDB()
     {
-        var handler = HttpContext.RequestServices.GetRequiredService<IUDPConnectionHandler>();
-        handler.ForceLogout();
-        handler.CloseConnections();
-
-        handler.Init(_settings.AniDb.Username, _settings.AniDb.Password,
-            _settings.AniDb.UDPServerAddress,
-            _settings.AniDb.UDPServerPort, _settings.AniDb.ClientPort);
-
-        if (handler.Login())
+        try
         {
+            var handler = HttpContext.RequestServices.GetRequiredService<IUDPConnectionHandler>();
             handler.ForceLogout();
-            return APIStatus.OK();
+            handler.CloseConnections();
+
+            handler.Init(_settings.AniDb.Username, _settings.AniDb.Password,
+                _settings.AniDb.UDPServerAddress,
+                _settings.AniDb.UDPServerPort, _settings.AniDb.ClientPort);
+
+            if (handler.Login())
+            {
+                handler.ForceLogout();
+                return APIStatus.OK();
+            }
+        }
+        catch (AniDBResourceCooldownException ex)
+        {
+            SetAniDBRetryAfterHeader(ex);
+            return new APIMessage(HttpStatusCode.ServiceUnavailable, GetAniDBCooldownMessage(ex));
         }
 
         return APIStatus.Unauthorized();
     }
+
+    private void SetAniDBRetryAfterHeader(AniDBResourceCooldownException ex)
+        => Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(ex.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+
+    private static string GetAniDBCooldownMessage(AniDBResourceCooldownException ex)
+        => $"AniDB resource {ex.ResourceKey} is cooling down. Try again after {ex.RetryAt:O}.";
 
     /// <summary>
     /// Return login/password/port of used AniDB

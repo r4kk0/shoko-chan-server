@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
@@ -99,7 +100,7 @@ public class DebugController : BaseController
     /// <param name="request">The AniDB UDP Request to make.</param>
     /// <returns>An AniDB UDP Response.</returns>
     [HttpPost("AniDB/UDP/Call")]
-    public AnidbUdpResponse CallAniDB([FromBody] AnidbUdpRequest request)
+    public ActionResult<AnidbUdpResponse> CallAniDB([FromBody] AnidbUdpRequest request)
     {
         try
         {
@@ -108,7 +109,7 @@ public class DebugController : BaseController
             if (request.NeedAuth)
             {
                 if (string.IsNullOrEmpty(_udpHandler.SessionID) && !_udpHandler.Login())
-                    return new() { Code = UDPReturnCode.NOT_LOGGED_IN };
+                    return new AnidbUdpResponse { Code = UDPReturnCode.NOT_LOGGED_IN };
                 request.Payload.Add("s", _udpHandler.SessionID);
             }
 
@@ -122,19 +123,19 @@ public class DebugController : BaseController
             _logger.LogDebug("Got response {Response}", fullResponse);
 
             if (decodedParts.Length < 2)
-                return new() { Response = fullResponse };
+                return new AnidbUdpResponse { Response = fullResponse };
 
             var firstLineParts = decodedParts[0].Split(' ', 2);
             if (firstLineParts.Length != 2)
-                return new() { Response = fullResponse };
+                return new AnidbUdpResponse { Response = fullResponse };
 
             if (!int.TryParse(firstLineParts[0], out var code))
-                return new() { Response = fullResponse };
+                return new AnidbUdpResponse { Response = fullResponse };
 
             var returnCode = (UDPReturnCode)code;
             _udpHandler.IsBanned = returnCode == UDPReturnCode.BANNED;
             if (_udpHandler.IsBanned)
-                return new() { Code = UDPReturnCode.BANNED };
+                return new AnidbUdpResponse { Code = UDPReturnCode.BANNED };
 
             switch (returnCode)
             {
@@ -142,7 +143,7 @@ public class DebugController : BaseController
                 case UDPReturnCode.ILLEGAL_INPUT_OR_ACCESS_DENIED:
                 {
                     _udpHandler.IsInvalidSession = true;
-                    return new() { Code = UDPReturnCode.NOT_LOGGED_IN };
+                    return new AnidbUdpResponse { Code = UDPReturnCode.NOT_LOGGED_IN };
                 }
                 case UDPReturnCode.INTERNAL_SERVER_ERROR:
                 case UDPReturnCode.ANIDB_OUT_OF_SERVICE:
@@ -156,11 +157,11 @@ public class DebugController : BaseController
                 }
                 case UDPReturnCode.UNKNOWN_COMMAND:
                 {
-                    return new() { Code = returnCode, Response = fullResponse };
+                    return new AnidbUdpResponse { Code = returnCode, Response = fullResponse };
                 }
             }
 
-            return new()
+            return new AnidbUdpResponse
             {
                 Code = returnCode,
                 Response = request.FullResponse ? fullResponse : decodedResponse,
@@ -170,13 +171,24 @@ public class DebugController : BaseController
         // here.
         catch (AniDBBannedException)
         {
-            return new() { Code = UDPReturnCode.BANNED };
+            return new AnidbUdpResponse { Code = UDPReturnCode.BANNED };
+        }
+        catch (AniDBResourceCooldownException ex)
+        {
+            SetAniDBRetryAfterHeader(ex);
+            return StatusCode(503, new AnidbUdpResponse { Response = GetAniDBCooldownMessage(ex) });
         }
         catch (NotLoggedInException)
         {
-            return new() { Code = UDPReturnCode.NOT_LOGGED_IN };
+            return new AnidbUdpResponse { Code = UDPReturnCode.NOT_LOGGED_IN };
         }
     }
+
+    private void SetAniDBRetryAfterHeader(AniDBResourceCooldownException ex)
+        => Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(ex.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+
+    private static string GetAniDBCooldownMessage(AniDBResourceCooldownException ex)
+        => $"AniDB resource {ex.ResourceKey} is cooling down. Try again after {ex.RetryAt:O}.";
 
     /// <summary>
     /// An abstraction for an AniDB UDP API Request.

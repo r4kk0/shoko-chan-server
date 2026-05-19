@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
@@ -11,6 +13,7 @@ using Shoko.Abstractions.Config.Exceptions;
 using Shoko.Abstractions.Web.Attributes;
 using Shoko.Server.API.Annotations;
 using Shoko.Server.API.v3.Models.Common;
+using Shoko.Server.Providers.AniDB;
 using Shoko.Server.Providers.AniDB.Interfaces;
 using Shoko.Server.Settings;
 using Shoko.Server.Utilities;
@@ -87,19 +90,33 @@ public class SettingsController(ISettingsProvider settingsProvider, Configuratio
             return ValidationProblem(ModelState);
         }
 
-        var settings = SettingsProvider.GetSettings();
-        if (!_udpHandler.IsAlive)
-            _udpHandler.Init(credentials.Username, credentials.Password, settings.AniDb.UDPServerAddress, settings.AniDb.UDPServerPort, settings.AniDb.ClientPort);
-        else _udpHandler.ForceLogout();
-
-        if (!_udpHandler.TestLogin(credentials.Username, credentials.Password))
+        try
         {
-            _logger.LogInformation("Failed AniDB Login and Connection");
-            return ValidationProblem("Failed to log in.", "Connection");
+            var settings = SettingsProvider.GetSettings();
+            if (!_udpHandler.IsAlive)
+                _udpHandler.Init(credentials.Username, credentials.Password, settings.AniDb.UDPServerAddress, settings.AniDb.UDPServerPort, settings.AniDb.ClientPort);
+            else _udpHandler.ForceLogout();
+
+            if (!_udpHandler.TestLogin(credentials.Username, credentials.Password))
+            {
+                _logger.LogInformation("Failed AniDB Login and Connection");
+                return ValidationProblem("Failed to log in.", "Connection");
+            }
+        }
+        catch (AniDBResourceCooldownException ex)
+        {
+            SetAniDBRetryAfterHeader(ex);
+            return StatusCode(503, GetAniDBCooldownMessage(ex));
         }
 
         return Ok();
     }
+
+    private void SetAniDBRetryAfterHeader(AniDBResourceCooldownException ex)
+        => Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(ex.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+
+    private static string GetAniDBCooldownMessage(AniDBResourceCooldownException ex)
+        => $"AniDB resource {ex.ResourceKey} is cooling down. Try again after {ex.RetryAt:O}.";
 
     /// <summary>
     /// Get a list of all supported languages.

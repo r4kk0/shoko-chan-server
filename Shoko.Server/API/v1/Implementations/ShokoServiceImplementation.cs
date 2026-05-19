@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Microsoft.AspNetCore.Mvc;
@@ -646,6 +647,12 @@ public partial class ShokoServiceImplementation : Controller
 
             return log;
         }
+        catch (AniDBResourceCooldownException ex)
+        {
+            Response.StatusCode = 503;
+            SetAniDBRetryAfterHeader(ex);
+            log += GetAniDBCooldownMessage(ex) + Environment.NewLine;
+        }
         catch (Exception ex)
         {
             log += ex.Message + Environment.NewLine;
@@ -653,6 +660,12 @@ public partial class ShokoServiceImplementation : Controller
 
         return log;
     }
+
+    private void SetAniDBRetryAfterHeader(AniDBResourceCooldownException ex)
+        => Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(ex.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+
+    private static string GetAniDBCooldownMessage(AniDBResourceCooldownException ex)
+        => $"AniDB resource {ex.ResourceKey} is cooling down. Try again after {ex.RetryAt:O}.";
 
     [HttpGet("MediaInfo/Quality")]
     public List<string> GetAllUniqueVideoQuality()
