@@ -44,6 +44,10 @@ public abstract class BaseJob : IJob
         {
             await context.RescheduleJob();
         }
+        catch (AniDBResourceCooldownException)
+        {
+            await context.RescheduleJob();
+        }
         catch (Exception ex)
         {
             // _logger.LogError(ex, "Job threw an error on Execution: {Job} | Error -> {Ex}", context.JobDetail.Key, ex);

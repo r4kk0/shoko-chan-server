@@ -163,10 +163,14 @@ public class HttpRateLimiter
 
     public async Task<T> EnsureRate<T>(Func<Task<T>> action, bool forceShortDelay = false)
     {
+        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBHttp);
+        AniDBResourceCooldownGuard.ThrowIfLongCooldown(SchedulerResources.AniDBHttp, calibrationDelay);
+
         await _lock.WaitAsync();
         try
         {
-            var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBHttp);
+            calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBHttp);
+            AniDBResourceCooldownGuard.ThrowIfLongCooldown(SchedulerResources.AniDBHttp, calibrationDelay);
             if (calibrationDelay > TimeSpan.Zero)
             {
                 _logger.LogTrace("AniDB HTTP calibration is delaying request for {Delay} ms", calibrationDelay.TotalMilliseconds);

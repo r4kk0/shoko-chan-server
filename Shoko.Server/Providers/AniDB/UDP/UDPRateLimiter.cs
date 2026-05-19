@@ -167,10 +167,14 @@ public class UDPRateLimiter
 
     public T EnsureRate<T>(Func<T> action, bool forceShortDelay = false)
     {
+        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBUdp);
+        AniDBResourceCooldownGuard.ThrowIfLongCooldown(SchedulerResources.AniDBUdp, calibrationDelay);
+
         lock (_lock)
             try
             {
-                var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBUdp);
+                calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBUdp);
+                AniDBResourceCooldownGuard.ThrowIfLongCooldown(SchedulerResources.AniDBUdp, calibrationDelay);
                 if (calibrationDelay > TimeSpan.Zero)
                 {
                     _logger.LogTrace("AniDB UDP calibration is delaying request for {Delay} ms", calibrationDelay.TotalMilliseconds);
