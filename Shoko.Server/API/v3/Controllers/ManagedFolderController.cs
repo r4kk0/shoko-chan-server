@@ -101,6 +101,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// </returns>
     [Authorize("admin")]
     [HttpPost("NotifyChangeDetected")]
+    [HttpPost("/api/v{version:apiVersion}/ImportFolder/NotifyChangeDetected")]
     public ActionResult NotifyVideoFileChangeDetectedAbsolutePath(
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] ManagedFolder.Input.NotifyChangeDetectedAbsoluteBody body
     )
@@ -115,6 +116,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// <param name="folderID">Managed Folder ID</param>
     /// <returns></returns>
     [HttpGet("{folderID}")]
+    [HttpGet("/api/v{version:apiVersion}/ImportFolder/{folderID}")]
     public ActionResult<ManagedFolder> GetManagedFolderByFolderID([FromRoute, Range(1, int.MaxValue)] int folderID)
     {
         if (RepoFactory.ShokoManagedFolder.GetByID(folderID) is not { } folder)
@@ -131,6 +133,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// <returns></returns>
     [Authorize("admin")]
     [HttpPatch("{folderID}")]
+    [HttpPatch("/api/v{version:apiVersion}/ImportFolder/{folderID}")]
     public ActionResult PatchManagedFolderByFolderID([FromRoute, Range(1, int.MaxValue)] int folderID,
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] JsonPatchDocument<ManagedFolder> patch)
     {
@@ -154,6 +157,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// <returns></returns>
     [Authorize("admin")]
     [HttpPut]
+    [HttpPut("/api/v{version:apiVersion}/ImportFolder")]
     public ActionResult EditManagedFolder([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] ManagedFolder body)
     {
         if (body.ID is 0)
@@ -188,6 +192,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// <returns></returns>
     [Authorize("admin")]
     [HttpDelete("{folderID}")]
+    [HttpDelete("/api/v{version:apiVersion}/ImportFolder/{folderID}")]
     public async Task<ActionResult> DeleteManagedFolderByFolderID([FromRoute, Range(1, int.MaxValue)] int folderID, [FromQuery] bool removeRecords = true,
         [FromQuery] bool updateMyList = true)
     {
@@ -212,6 +217,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// <returns></returns>
     [Authorize("admin")]
     [HttpGet("{folderID}/Scan")]
+    [HttpGet("/api/v{version:apiVersion}/ImportFolder/{folderID}/Scan")]
     public async Task<ActionResult> ScanManagedFolderByFolderID(
         [FromRoute, Range(1, int.MaxValue)] int folderID,
         [FromQuery] string relativePath = "",
@@ -238,6 +244,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// </returns>
     [Authorize("admin")]
     [HttpPost("{folderID}/NotifyChangeDetected")]
+    [HttpPost("/api/v{version:apiVersion}/ImportFolder/{folderID}/NotifyChangeDetected")]
     public ActionResult NotifyVideoFileChangeDetectedRelativePathByFolderID(
         [FromRoute, Range(1, int.MaxValue)] int folderID,
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] ManagedFolder.Input.NotifyChangeDetectedRelativeBody body
@@ -259,6 +266,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// <param name="include">Include items that are not included by default</param>
     /// <returns></returns>
     [HttpGet("{folderID}/File")]
+    [HttpGet("/api/v{version:apiVersion}/ImportFolder/{folderID}/File")]
     public ActionResult<ListResult<File>> GetFilesInManagedFolder([FromRoute, Range(1, int.MaxValue)] int folderID,
         [FromQuery, Range(0, 10000)] int pageSize = 200,
         [FromQuery, Range(1, int.MaxValue)] int page = 1,
