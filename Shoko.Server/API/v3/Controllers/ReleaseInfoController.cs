@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +19,7 @@ using Shoko.Server.API.v3.Helpers;
 using Shoko.Server.API.v3.Models.Common;
 using Shoko.Server.API.v3.Models.Release;
 using Shoko.Server.API.v3.Models.Release.Input;
+using Shoko.Server.Providers.AniDB;
 using Shoko.Server.Repositories.Cached;
 using Shoko.Server.Settings;
 
@@ -200,7 +202,17 @@ public class ReleaseInfoController(ISettingsProvider settingsProvider, IPluginMa
         if (videoReleaseService.GetProviderInfo(providerID) is not { } providerInfo)
             return NotFound($"Release Provider '{providerID}' not found!");
 
-        if (await providerInfo.Provider.GetReleaseInfoById(id, HttpContext.RequestAborted) is not { } releaseInfo)
+        Shoko.Abstractions.Video.Release.ReleaseInfo? releaseInfo;
+        try
+        {
+            releaseInfo = await providerInfo.Provider.GetReleaseInfoById(id, HttpContext.RequestAborted);
+        }
+        catch (AniDBResourceCooldownException ex)
+        {
+            return AniDBCooldown(ex);
+        }
+
+        if (releaseInfo is null)
             return NoContent();
 
         return new ReleaseInfo(new ReleaseInfoWithProvider(releaseInfo, providerInfo.Provider.Name));
@@ -262,7 +274,17 @@ public class ReleaseInfoController(ISettingsProvider settingsProvider, IPluginMa
             return BadRequest("File ID or ED2K must be provided!");
         }
 
-        if (await providerInfo.Provider.GetReleaseInfoForVideo(new() { Video = video, IsAutomatic = isAutomatic }, HttpContext.RequestAborted) is not { } releaseInfo)
+        Shoko.Abstractions.Video.Release.ReleaseInfo? releaseInfo;
+        try
+        {
+            releaseInfo = await providerInfo.Provider.GetReleaseInfoForVideo(new() { Video = video, IsAutomatic = isAutomatic }, HttpContext.RequestAborted);
+        }
+        catch (AniDBResourceCooldownException ex)
+        {
+            return AniDBCooldown(ex);
+        }
+
+        if (releaseInfo is null)
             return NoContent();
 
         return Ok(new ReleaseInfo(new ReleaseInfoWithProvider(releaseInfo, providerInfo.Provider.Name)));
@@ -369,10 +391,26 @@ public class ReleaseInfoController(ISettingsProvider settingsProvider, IPluginMa
             providers = videoReleaseService.GetAvailableProviders(onlyEnabled: true).ToList();
         }
 
-        if (await videoReleaseService.FindReleaseForVideo(video, providers, saveRelease: false, isAutomatic: isAutomatic, cancellationToken: HttpContext.RequestAborted) is not { } releaseInfo)
+        IReleaseInfo? releaseInfo;
+        try
+        {
+            releaseInfo = await videoReleaseService.FindReleaseForVideo(video, providers, saveRelease: false, isAutomatic: isAutomatic, cancellationToken: HttpContext.RequestAborted);
+        }
+        catch (AniDBResourceCooldownException ex)
+        {
+            return AniDBCooldown(ex);
+        }
+
+        if (releaseInfo is null)
             return NoContent();
 
         return Ok(new ReleaseInfo(releaseInfo));
+    }
+
+    private ActionResult AniDBCooldown(AniDBResourceCooldownException ex)
+    {
+        Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(ex.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+        return StatusCode(503, $"AniDB resource {ex.ResourceKey} is cooling down. Try again after {ex.RetryAt:O}.");
     }
 
     /// <summary>
