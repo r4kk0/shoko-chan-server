@@ -177,3 +177,10 @@ UpgradeLog*.htm
 /Shoko.Server.VC.db
 
 .env
+
+# Local review exports and raw handoff notes
+review*.txt
+review*.patch
+*.patch
+dev-notes/codex/
+local-notes/

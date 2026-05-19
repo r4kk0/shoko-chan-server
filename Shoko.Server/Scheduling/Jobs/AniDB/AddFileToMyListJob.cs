@@ -23,6 +23,7 @@ using Shoko.Server.Utilities;
 namespace Shoko.Server.Scheduling.Jobs.AniDB;
 
 [DatabaseRequired]
+[NetworkRequired]
 [AniDBUdpRateLimited]
 [DisallowConcurrencyGroup(ConcurrencyGroups.AniDB_UDP)]
 [JobKeyGroup(JobKeyGroup.AniDB)]

@@ -24,6 +24,7 @@ using ImageEntityType = Shoko.Abstractions.Metadata.Enums.ImageEntityType;
 namespace Shoko.Server.Scheduling.Jobs.AniDB;
 
 [DatabaseRequired]
+[NetworkRequired]
 [AniDBUdpRateLimited]
 [DisallowConcurrencyGroup(ConcurrencyGroups.AniDB_UDP)]
 [JobKeyGroup(JobKeyGroup.AniDB)]

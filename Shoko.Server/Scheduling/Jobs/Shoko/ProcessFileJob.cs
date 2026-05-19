@@ -15,6 +15,7 @@ using Shoko.Server.Utilities;
 namespace Shoko.Server.Scheduling.Jobs.Shoko;
 
 [DatabaseRequired]
+[NetworkRequired]
 [LimitConcurrency(4)]
 [AniDBUdpRateLimited]
 [DisallowConcurrencyGroup(ConcurrencyGroups.AniDB_UDP)]

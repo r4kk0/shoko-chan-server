@@ -33,6 +33,7 @@ using Shoko.Server.Utilities;
 namespace Shoko.Server.Scheduling.Jobs.AniDB;
 
 [DatabaseRequired]
+[NetworkRequired]
 [AniDBHttpRateLimited]
 [DisallowConcurrencyGroup(ConcurrencyGroups.AniDB_HTTP)]
 [JobKeyGroup(JobKeyGroup.AniDB)]
