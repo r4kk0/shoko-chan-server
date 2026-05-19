@@ -44,6 +44,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// </summary>
     /// <returns></returns>
     [HttpGet]
+    [HttpGet("/api/v{version:apiVersion}/ImportFolder")]
     public ActionResult<List<ManagedFolder>> GetAllManagedFolders()
         => RepoFactory.ShokoManagedFolder.GetAll()
             .Select(a => new ManagedFolder(a))
@@ -55,6 +56,7 @@ public class ManagedFolderController(ISettingsProvider settingsProvider, ISchedu
     /// <returns><see cref="ManagedFolder"/> with generated values like ID</returns>
     [Authorize("admin")]
     [HttpPost]
+    [HttpPost("/api/v{version:apiVersion}/ImportFolder")]
     public ActionResult<ManagedFolder> AddManagedFolder(
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] ManagedFolder.Input.CreateManagedFolderBody body
     )
