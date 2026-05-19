@@ -962,11 +962,10 @@ public class SeriesController : BaseController
     /// <param name="downloadRelations">Download relations for the series</param>
     /// <param name="createSeriesEntry">Also create the Series entries if
     /// it/they do not exist</param>
-    /// <param name="immediate">Try to immediately refresh the data if we're
-    /// not HTTP banned.</param>
+    /// <param name="immediate">Prioritize the queued refresh so it can run sooner.</param>
     /// <param name="cacheOnly">Only used data from the cache when performing the refresh. <paramref name="force"/> takes precedence over this option.</param>
     /// <param name="skipTmdbUpdate">Skip updating related TMDB entities after refresh.</param>
-    /// <returns>True if the refresh was performed at once, otherwise false if it was queued.</returns>
+    /// <returns>False when the refresh was queued.</returns>
     [HttpPost("AniDB/{anidbID}/Refresh")]
     public async Task<ActionResult<bool>> RefreshAniDBByAniDBID([FromRoute] int anidbID, [FromQuery] bool force = false,
         [FromQuery] bool downloadRelations = false, [FromQuery] bool? createSeriesEntry = null,
@@ -994,11 +993,10 @@ public class SeriesController : BaseController
     /// <param name="downloadRelations">Download relations for the series</param>
     /// <param name="createSeriesEntry">Also create the Series entries if
     /// it/they do not exist</param>
-    /// <param name="immediate">Try to immediately refresh the data if we're
-    /// not HTTP banned.</param>
+    /// <param name="immediate">Prioritize the queued refresh so it can run sooner.</param>
     /// <param name="cacheOnly">Only used data from the cache when performing the refresh. <paramref name="force"/> takes precedence over this option.</param>
     /// <param name="skipTmdbUpdate">Skip updating related TMDB entities after refresh.</param>
-    /// <returns>True if the refresh is done, otherwise false if it was queued.</returns>
+    /// <returns>False when the refresh was queued.</returns>
     [HttpPost("{seriesID}/AniDB/Refresh")]
     public async Task<ActionResult<bool>> RefreshAniDBBySeriesID([FromRoute, Range(1, int.MaxValue)] int seriesID, [FromQuery] bool force = false,
         [FromQuery] bool downloadRelations = false, [FromQuery] bool? createSeriesEntry = null,

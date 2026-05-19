@@ -887,19 +887,7 @@ public class ActionService
             refreshMethod |= AnidbRefreshMethod.DeferToRemoteIfUnsuccessful;
         if (skipTmdbUpdate)
             refreshMethod |= AnidbRefreshMethod.SkipTmdbUpdate;
-        if (immediate)
-        {
-            try
-            {
-                return await _anidbService.RefreshAnimeByID(animeID, refreshMethod).ConfigureAwait(false) is not null;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        await _anidbService.ScheduleRefreshOfAnimeByID(animeID, refreshMethod).ConfigureAwait(false);
+        await _anidbService.ScheduleRefreshOfAnimeByID(animeID, refreshMethod, prioritize: immediate).ConfigureAwait(false);
         return false;
     }
 
