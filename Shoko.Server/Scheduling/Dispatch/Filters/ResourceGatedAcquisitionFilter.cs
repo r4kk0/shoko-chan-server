@@ -46,13 +46,15 @@ public abstract class ResourceGatedAcquisitionFilter : IAcquisitionFilter
 
     protected void NotifyStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
 
-    protected static Type[] GetJobTypesForResource(SchedulerResource resource)
+    protected static Type[] GetJobTypesForResource(SchedulerResource resource) => GetJobTypesForResource(resource.ToResourceKey());
+
+    protected static Type[] GetJobTypesForResource(SchedulerResourceKey resourceKey)
         => AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(a => a.GetTypes())
             .Where(type =>
                 typeof(IJob).IsAssignableFrom(type) &&
                 !type.IsAbstract &&
-                type.GetCustomAttributes<SchedulerResourceAttribute>(true).Any(attribute => attribute.Resource == resource)
+                type.GetCustomAttributes<SchedulerResourceAttribute>(true).Any(attribute => attribute.ResourceKey == resourceKey)
             )
             .ToArray();
 

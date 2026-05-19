@@ -92,7 +92,7 @@ public partial class AniDBUDPConnectionHandler : ConnectionHandler, IUDPConnecti
             {
                 _isLoggedOn = false;
                 SessionID = null;
-                _calibrator.RecordBan(SchedulerResource.AniDBUdp, DateTime.Now.AddHours(BanTimerResetLength));
+                _calibrator.RecordBan(SchedulerResources.AniDBUdp, DateTime.Now.AddHours(BanTimerResetLength));
             }
 
             IsInvalidSession = false;
@@ -127,7 +127,7 @@ public partial class AniDBUDPConnectionHandler : ConnectionHandler, IUDPConnecti
 
     void IUDPConnectionHandler.StartBackoffTimer(int time, string message)
     {
-        _calibrator.RecordThrottle(SchedulerResource.AniDBUdp, TimeSpan.FromSeconds(time), message);
+        _calibrator.RecordThrottle(SchedulerResources.AniDBUdp, TimeSpan.FromSeconds(time), message);
         base.StartBackoffTimer(time, message);
     }
 

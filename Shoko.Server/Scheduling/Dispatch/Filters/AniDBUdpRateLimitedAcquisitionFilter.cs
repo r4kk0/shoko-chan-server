@@ -38,7 +38,7 @@ public class AniDBUdpRateLimitedAcquisitionFilter : ResourceGatedAcquisitionFilt
         _processJobIncluded = true;
         _ready = false;
 
-        _typesWithProcessJob = GetJobTypesForResource(SchedulerResource.AniDBUdp);
+        _typesWithProcessJob = GetJobTypesForResource(resourceLimit.ResourceKey);
         _typesWithoutProcessJob = _typesWithProcessJob.Where(a => !typeof(ProcessFileJob).IsAssignableFrom(a)).ToArray();
     }
 

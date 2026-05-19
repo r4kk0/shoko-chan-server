@@ -146,7 +146,7 @@ public class HttpRateLimiter
 
     public TimeSpan GetTimeUntilAvailable(bool forceShortDelay = false)
     {
-        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBHttp);
+        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBHttp);
         if (_lock.CurrentCount == 0)
             return Max(calibrationDelay, TimeSpan.FromMilliseconds(100));
 
@@ -166,7 +166,7 @@ public class HttpRateLimiter
         await _lock.WaitAsync();
         try
         {
-            var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBHttp);
+            var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBHttp);
             if (calibrationDelay > TimeSpan.Zero)
             {
                 _logger.LogTrace("AniDB HTTP calibration is delaying request for {Delay} ms", calibrationDelay.TotalMilliseconds);
@@ -182,7 +182,7 @@ public class HttpRateLimiter
                 _logger.LogTrace("Time since last request is {Delay} ms, not throttling", delay);
                 _logger.LogTrace("Sending AniDB command");
                 var response = await action();
-                _calibrator.RecordSuccess(SchedulerResource.AniDBHttp);
+                _calibrator.RecordSuccess(SchedulerResources.AniDBHttp);
                 return response;
             }
 
@@ -193,17 +193,17 @@ public class HttpRateLimiter
 
             _logger.LogTrace("Sending AniDB command");
             var delayedResponse = await action();
-            _calibrator.RecordSuccess(SchedulerResource.AniDBHttp);
+            _calibrator.RecordSuccess(SchedulerResources.AniDBHttp);
             return delayedResponse;
         }
         catch (AniDBBannedException ex)
         {
-            _calibrator.RecordBan(SchedulerResource.AniDBHttp, ex.BanExpires);
+            _calibrator.RecordBan(SchedulerResources.AniDBHttp, ex.BanExpires);
             throw;
         }
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable)
         {
-            _calibrator.RecordThrottle(SchedulerResource.AniDBHttp, null, $"HTTP {(int)ex.StatusCode.Value}");
+            _calibrator.RecordThrottle(SchedulerResources.AniDBHttp, null, $"HTTP {(int)ex.StatusCode.Value}");
             throw;
         }
         finally

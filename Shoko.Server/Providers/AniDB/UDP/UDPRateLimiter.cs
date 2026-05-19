@@ -143,7 +143,7 @@ public class UDPRateLimiter
 
     public TimeSpan GetTimeUntilAvailable(bool forceShortDelay = false)
     {
-        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBUdp);
+        var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBUdp);
         if (!Monitor.TryEnter(_lock))
             return Max(calibrationDelay, TimeSpan.FromMilliseconds(100));
 
@@ -170,7 +170,7 @@ public class UDPRateLimiter
         lock (_lock)
             try
             {
-                var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBUdp);
+                var calibrationDelay = _calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBUdp);
                 if (calibrationDelay > TimeSpan.Zero)
                 {
                     _logger.LogTrace("AniDB UDP calibration is delaying request for {Delay} ms", calibrationDelay.TotalMilliseconds);
@@ -186,7 +186,7 @@ public class UDPRateLimiter
                     _logger.LogTrace("Time since last request is {Delay} ms, not throttling", delay);
                     _logger.LogTrace("Sending AniDB command");
                     var response = action();
-                    _calibrator.RecordSuccess(SchedulerResource.AniDBUdp);
+                    _calibrator.RecordSuccess(SchedulerResources.AniDBUdp);
                     return response;
                 }
 
@@ -197,12 +197,12 @@ public class UDPRateLimiter
 
                 _logger.LogTrace("Sending AniDB command");
                 var delayedResponse = action();
-                _calibrator.RecordSuccess(SchedulerResource.AniDBUdp);
+                _calibrator.RecordSuccess(SchedulerResources.AniDBUdp);
                 return delayedResponse;
             }
             catch (AniDBBannedException ex)
             {
-                _calibrator.RecordBan(SchedulerResource.AniDBUdp, ex.BanExpires);
+                _calibrator.RecordBan(SchedulerResources.AniDBUdp, ex.BanExpires);
                 throw;
             }
             finally

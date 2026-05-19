@@ -61,14 +61,79 @@ public class ResourceGatedAcquisitionFilterTests
         Assert.Contains(typeof(ProcessFileJob), withAniDBExcludedTypes);
     }
 
+    [Fact]
+    public void SchedulerResourceMapsAniDBUdpToProviderLaneKey()
+    {
+        Assert.Equal(SchedulerResources.AniDBUdp, SchedulerResource.AniDBUdp.ToResourceKey());
+        Assert.Equal("AniDB.UDP", SchedulerResource.AniDBUdp.ToResourceKey().ToString());
+    }
+
+    [Fact]
+    public void SchedulerResourceAttributeStoresResourceKey()
+    {
+        var attribute = new SchedulerResourceAttribute(SchedulerResource.AniDBUdp);
+
+        Assert.Equal(SchedulerResource.AniDBUdp, attribute.Resource);
+        Assert.Equal(SchedulerResources.AniDBUdp, attribute.ResourceKey);
+    }
+
+    [Fact]
+    public void ResourceGatedAcquisitionFilterMatchesJobsByResourceKey()
+    {
+        var filter = new TestResourceKeyGatedAcquisitionFilter(SchedulerResources.AniDBUdp);
+        var excludedTypes = filter.GetTypesToExclude().ToHashSet();
+
+        Assert.Contains(typeof(AddFileToMyListJob), excludedTypes);
+        Assert.Contains(typeof(ProcessFileJob), excludedTypes);
+        Assert.DoesNotContain(typeof(HashFileJob), excludedTypes);
+    }
+
+    [Fact]
+    public void AniDBUdpResourceLimitExposesResourceKey()
+    {
+        var resourceLimit = CreateUdpResourceLimit();
+
+        Assert.Equal(SchedulerResource.AniDBUdp, resourceLimit.Resource);
+        Assert.Equal(SchedulerResources.AniDBUdp, resourceLimit.ResourceKey);
+    }
+
+    [Fact]
+    public void AniDBLimitCalibratorRecordsAndReadsCooldownByResourceKey()
+    {
+        var calibrator = new AniDBLimitCalibrator(Mock.Of<ILogger<AniDBLimitCalibrator>>());
+
+        calibrator.RecordThrottle(SchedulerResources.AniDBUdp, TimeSpan.FromMinutes(1), "test");
+
+        Assert.True(calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBUdp) > TimeSpan.Zero);
+        Assert.Equal(TimeSpan.Zero, calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBHttp));
+    }
+
+    [Fact]
+    public void AniDBLimitCalibratorPreservesEnumCompatibility()
+    {
+        var calibrator = new AniDBLimitCalibrator(Mock.Of<ILogger<AniDBLimitCalibrator>>());
+
+        calibrator.RecordThrottle(SchedulerResource.AniDBUdp, TimeSpan.FromMinutes(1), "test");
+
+        Assert.True(calibrator.GetDelayUntilAvailable(SchedulerResource.AniDBUdp) > TimeSpan.Zero);
+        Assert.True(calibrator.GetDelayUntilAvailable(SchedulerResources.AniDBUdp) > TimeSpan.Zero);
+    }
+
     private sealed class TestResourceGatedAcquisitionFilter(SchedulerResource resource) : ResourceGatedAcquisitionFilter(new TestResourceLimit(resource))
     {
         protected override IEnumerable<Type> GetResourceLimitedTypes() => GetJobTypesForResource(resource);
     }
 
+    private sealed class TestResourceKeyGatedAcquisitionFilter(SchedulerResourceKey resourceKey) : ResourceGatedAcquisitionFilter(new TestResourceLimit(SchedulerResource.AniDBUdp))
+    {
+        protected override IEnumerable<Type> GetResourceLimitedTypes() => GetJobTypesForResource(resourceKey);
+    }
+
     private sealed class TestResourceLimit(SchedulerResource resource) : ISchedulerResourceLimit
     {
         public SchedulerResource Resource { get; } = resource;
+
+        public SchedulerResourceKey ResourceKey { get; } = resource.ToKey();
 
         public TimeSpan GetDelayUntilAvailable() => TimeSpan.FromSeconds(1);
     }
@@ -85,10 +150,7 @@ public class ResourceGatedAcquisitionFilterTests
         configurationService.Setup(service => service.GetConfigurationInfo<ServerSettings>()).Returns(configurationInfo);
         configurationService.Setup(service => service.Load(configurationInfo, It.IsAny<bool>())).Returns(new ServerSettings());
 
-        var calibrator = new AniDBLimitCalibrator(Mock.Of<ILogger<AniDBLimitCalibrator>>());
-        calibrator.RecordThrottle(SchedulerResource.AniDBUdp, TimeSpan.FromMinutes(1), "test");
-        var rateLimiter = new UDPRateLimiter(Mock.Of<ILogger<UDPRateLimiter>>(), new ConfigurationProvider<ServerSettings>(configurationService.Object), calibrator);
-        var resourceLimit = new AniDBUdpResourceLimit(rateLimiter);
+        var resourceLimit = CreateUdpResourceLimit(configurationService.Object);
 
         var systemService = new Mock<ISystemService>();
         var videoReleaseService = new Mock<IVideoReleaseService>();
@@ -99,6 +161,24 @@ public class ResourceGatedAcquisitionFilterTests
         systemService.Raise(service => service.AboutToStart += null, new ServerAboutToStartEventArgs { ServiceProvider = Mock.Of<IServiceProvider>() });
 
         return filter;
+    }
+
+    private static AniDBUdpResourceLimit CreateUdpResourceLimit(IConfigurationService? configurationService = null)
+    {
+        configurationService ??= CreateConfigurationService();
+        var calibrator = new AniDBLimitCalibrator(Mock.Of<ILogger<AniDBLimitCalibrator>>());
+        calibrator.RecordThrottle(SchedulerResource.AniDBUdp, TimeSpan.FromMinutes(1), "test");
+        var rateLimiter = new UDPRateLimiter(Mock.Of<ILogger<UDPRateLimiter>>(), new ConfigurationProvider<ServerSettings>(configurationService), calibrator);
+        return new AniDBUdpResourceLimit(rateLimiter);
+    }
+
+    private static IConfigurationService CreateConfigurationService()
+    {
+        var configurationService = new Mock<IConfigurationService>();
+        var configurationInfo = CreateConfigurationInfo(configurationService.Object);
+        configurationService.Setup(service => service.GetConfigurationInfo<ServerSettings>()).Returns(configurationInfo);
+        configurationService.Setup(service => service.Load(configurationInfo, It.IsAny<bool>())).Returns(new ServerSettings());
+        return configurationService.Object;
     }
 
     private static ConfigurationInfo CreateConfigurationInfo(IConfigurationService configurationService)

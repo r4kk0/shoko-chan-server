@@ -7,5 +7,7 @@ public class AniDBUdpResourceLimit(UDPRateLimiter rateLimiter) : ISchedulerResou
 {
     public SchedulerResource Resource => SchedulerResource.AniDBUdp;
 
+    public SchedulerResourceKey ResourceKey => SchedulerResources.AniDBUdp;
+
     public TimeSpan GetDelayUntilAvailable() => rateLimiter.GetTimeUntilAvailable();
 }

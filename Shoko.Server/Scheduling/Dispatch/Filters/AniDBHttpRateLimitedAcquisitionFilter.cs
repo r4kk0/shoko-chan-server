@@ -16,7 +16,7 @@ public class AniDBHttpRateLimitedAcquisitionFilter : ResourceGatedAcquisitionFil
     {
         _connectionHandler = connectionHandler;
         _connectionHandler.AniDBStateUpdate += OnAniDBStateUpdate;
-        _types = GetJobTypesForResource(SchedulerResource.AniDBHttp);
+        _types = GetJobTypesForResource(resourceLimit.ResourceKey);
     }
 
     ~AniDBHttpRateLimitedAcquisitionFilter()

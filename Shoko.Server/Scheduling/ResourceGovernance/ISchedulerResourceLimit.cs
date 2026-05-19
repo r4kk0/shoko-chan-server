@@ -6,5 +6,7 @@ public interface ISchedulerResourceLimit
 {
     SchedulerResource Resource { get; }
 
+    SchedulerResourceKey ResourceKey { get; }
+
     TimeSpan GetDelayUntilAvailable();
 }

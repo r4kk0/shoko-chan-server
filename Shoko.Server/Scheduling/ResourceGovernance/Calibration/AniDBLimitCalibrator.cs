@@ -9,7 +9,7 @@ public class AniDBLimitCalibrator
     private static readonly TimeSpan ThrottlePenalty = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan BanPenaltyFallback = TimeSpan.FromHours(12);
 
-    private readonly ConcurrentDictionary<SchedulerResource, ProviderLimitProfile> _profiles = new();
+    private readonly ConcurrentDictionary<SchedulerResourceKey, ProviderLimitProfile> _profiles = new();
     private readonly ILogger<AniDBLimitCalibrator> _logger;
 
     public AniDBLimitCalibrator(ILogger<AniDBLimitCalibrator> logger)
@@ -17,7 +17,9 @@ public class AniDBLimitCalibrator
         _logger = logger;
     }
 
-    public TimeSpan GetDelayUntilAvailable(SchedulerResource resource)
+    public TimeSpan GetDelayUntilAvailable(SchedulerResource resource) => GetDelayUntilAvailable(resource.ToKey());
+
+    public TimeSpan GetDelayUntilAvailable(SchedulerResourceKey resource)
     {
         if (!_profiles.TryGetValue(resource, out var profile))
             return TimeSpan.Zero;
@@ -29,7 +31,9 @@ public class AniDBLimitCalibrator
         return profile.PauseUntil.Value - now;
     }
 
-    public void RecordSuccess(SchedulerResource resource)
+    public void RecordSuccess(SchedulerResource resource) => RecordSuccess(resource.ToKey());
+
+    public void RecordSuccess(SchedulerResourceKey resource)
     {
         var profile = GetProfile(resource);
         lock (profile)
@@ -40,7 +44,9 @@ public class AniDBLimitCalibrator
         }
     }
 
-    public void RecordThrottle(SchedulerResource resource, TimeSpan? retryAfter, string reason)
+    public void RecordThrottle(SchedulerResource resource, TimeSpan? retryAfter, string reason) => RecordThrottle(resource.ToKey(), retryAfter, reason);
+
+    public void RecordThrottle(SchedulerResourceKey resource, TimeSpan? retryAfter, string reason)
     {
         var pause = retryAfter.GetValueOrDefault(ThrottlePenalty);
         var pauseUntil = DateTimeOffset.UtcNow + pause;
@@ -56,7 +62,9 @@ public class AniDBLimitCalibrator
         _logger.LogWarning("AniDB {Resource} calibration observed throttle signal ({Reason}); pausing dispatch until {PauseUntil}", resource, reason, pauseUntil);
     }
 
-    public void RecordBan(SchedulerResource resource, DateTime? banExpires)
+    public void RecordBan(SchedulerResource resource, DateTime? banExpires) => RecordBan(resource.ToKey(), banExpires);
+
+    public void RecordBan(SchedulerResourceKey resource, DateTime? banExpires)
     {
         var pauseUntil = banExpires.HasValue
             ? new DateTimeOffset(banExpires.Value.ToUniversalTime())
@@ -74,7 +82,7 @@ public class AniDBLimitCalibrator
         _logger.LogWarning("AniDB {Resource} calibration observed ban signal; pausing dispatch until {PauseUntil}", resource, pauseUntil);
     }
 
-    private ProviderLimitProfile GetProfile(SchedulerResource resource)
+    private ProviderLimitProfile GetProfile(SchedulerResourceKey resource)
         => _profiles.GetOrAdd(resource, static resource => new ProviderLimitProfile(resource));
 
     private static DateTimeOffset Max(DateTimeOffset? current, DateTimeOffset next)
@@ -82,12 +90,12 @@ public class AniDBLimitCalibrator
 
     private sealed class ProviderLimitProfile
     {
-        public ProviderLimitProfile(SchedulerResource resource)
+        public ProviderLimitProfile(SchedulerResourceKey resource)
         {
             Resource = resource;
         }
 
-        public SchedulerResource Resource { get; }
+        public SchedulerResourceKey Resource { get; }
 
         public DateTimeOffset? PauseUntil { get; set; }
 

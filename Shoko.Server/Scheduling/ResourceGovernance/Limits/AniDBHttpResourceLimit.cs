@@ -7,5 +7,7 @@ public class AniDBHttpResourceLimit(HttpRateLimiter rateLimiter) : ISchedulerRes
 {
     public SchedulerResource Resource => SchedulerResource.AniDBHttp;
 
+    public SchedulerResourceKey ResourceKey => SchedulerResources.AniDBHttp;
+
     public TimeSpan GetDelayUntilAvailable() => rateLimiter.GetTimeUntilAvailable();
 }

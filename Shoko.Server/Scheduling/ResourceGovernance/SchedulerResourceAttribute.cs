@@ -7,4 +7,6 @@ namespace Shoko.Server.Scheduling.ResourceGovernance;
 public class SchedulerResourceAttribute(SchedulerResource resource) : AcquisitionFilterAttribute
 {
     public SchedulerResource Resource { get; } = resource;
+
+    public SchedulerResourceKey ResourceKey { get; } = resource.ToResourceKey();
 }
