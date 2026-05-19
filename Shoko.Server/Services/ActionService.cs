@@ -916,24 +916,8 @@ public class ActionService
                 continue;
             }
 
-            int? epAnimeID = null;
-            var epRequest = _requestFactory.Create<RequestGetEpisode>(r => r.EpisodeID = episodeId);
-            try
-            {
-                var epResponse = epRequest.Send();
-                epAnimeID = epResponse.Response?.AnimeID;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Could not get Episode Info for {EpisodeID}", episode.EpisodeID);
-            }
-
-            if (epAnimeID is not null)
-            {
-                foreach (var xref in xrefs)
-                    xref.AnimeID = epAnimeID.Value;
-                RepoFactory.CrossRef_File_Episode.Save(xrefs);
-            }
+            var scheduler = await _schedulerFactory.GetScheduler().ConfigureAwait(false);
+            await scheduler.StartJob<ResolveAniDBEpisodeAnimeJob>(job => job.EpisodeID = episodeId).ConfigureAwait(false);
         }
 
         // Queue missing anime needed by existing files.

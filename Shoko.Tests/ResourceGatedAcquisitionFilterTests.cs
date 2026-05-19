@@ -19,6 +19,9 @@ using Shoko.Abstractions.Video.Release;
 using Shoko.Abstractions.Video.Services;
 using Shoko.Server.Providers.AniDB.Interfaces;
 using Shoko.Server.Providers.AniDB.UDP;
+using Shoko.Server.Scheduling.Attributes;
+using Shoko.Server.Scheduling.Concurrency;
+using Shoko.Server.Scheduling.Dispatch.Attributes;
 using Shoko.Server.Scheduling.Dispatch.Filters;
 using Shoko.Server.Scheduling.Jobs.AniDB;
 using Shoko.Server.Scheduling.Jobs.Shoko;
@@ -40,6 +43,7 @@ public class ResourceGatedAcquisitionFilterTests
         var shokoJobsAssembly = typeof(HashFileJob).Assembly;
 
         Assert.Contains(typeof(AddFileToMyListJob), excludedTypes);
+        Assert.Contains(typeof(ResolveAniDBEpisodeAnimeJob), excludedTypes);
         Assert.DoesNotContain(typeof(HashFileJob), excludedTypes);
         Assert.DoesNotContain(shokoJobsAssembly.GetType("Shoko.Server.Scheduling.Jobs.Shoko.ScanFolderJob", throwOnError: true)!, excludedTypes);
         Assert.DoesNotContain(typeof(MediaInfoJob), excludedTypes);
@@ -86,6 +90,19 @@ public class ResourceGatedAcquisitionFilterTests
         Assert.Contains(typeof(AddFileToMyListJob), excludedTypes);
         Assert.Contains(typeof(ProcessFileJob), excludedTypes);
         Assert.DoesNotContain(typeof(HashFileJob), excludedTypes);
+    }
+
+    [Fact]
+    public void ResolveAniDBEpisodeAnimeJobUsesAniDBUdpGovernance()
+    {
+        var type = typeof(ResolveAniDBEpisodeAnimeJob);
+
+        Assert.True(Attribute.IsDefined(type, typeof(DatabaseRequiredAttribute)));
+        Assert.True(Attribute.IsDefined(type, typeof(NetworkRequiredAttribute)));
+        Assert.True(Attribute.IsDefined(type, typeof(AniDBUdpRateLimitedAttribute)));
+        Assert.True(Attribute.IsDefined(type, typeof(DisallowConcurrencyGroupAttribute)));
+        Assert.True(Attribute.IsDefined(type, typeof(JobKeyGroupAttribute)));
+        Assert.True(Attribute.IsDefined(type.GetProperty(nameof(ResolveAniDBEpisodeAnimeJob.EpisodeID))!, typeof(JobKeyMemberAttribute)));
     }
 
     [Fact]
