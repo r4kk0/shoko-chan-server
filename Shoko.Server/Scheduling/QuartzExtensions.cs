@@ -160,6 +160,7 @@ public static class QuartzExtensions
 
         scheduleBuilder ??= SimpleScheduleBuilder.Create().WithMisfireHandlingInstructionIgnoreMisfires();
         var collection = new Dictionary<IJobDetail, IReadOnlyCollection<ITrigger>>();
+        var triggersToPromote = new List<(JobKey jobKey, int priority)>();
         var triggersToRemove = new List<TriggerKey>();
         var time = DateTimeOffset.UtcNow;
         using (var _ = await SchedulerLock.ReaderLockAsync())
@@ -170,6 +171,8 @@ public static class QuartzExtensions
                 {
                     if (!startTime.HasValue || startTime <= time)
                     {
+                        if (priority > 0)
+                            triggersToPromote.Add((job.Key, priority));
                         _logger.Trace("Skipped scheduling {JobName} because it is already scheduled.", job.Key);
                         continue;
                     }
@@ -200,15 +203,39 @@ public static class QuartzExtensions
             }
         }
 
-        if (collection.Count == 0) return;
+        if (collection.Count == 0 && triggersToPromote.Count == 0) return;
         time = DateTimeOffset.UtcNow;
-        _logger.Trace("Scheduling {Count} jobs and unscheduling {Count} triggers.", collection.Count, triggersToRemove.Count);
+        _logger.Trace("Scheduling {Count} jobs, unscheduling {Count} triggers, and promoting {PromoteCount} duplicate jobs.", collection.Count, triggersToRemove.Count,
+            triggersToPromote.Count);
         using var __ = await SchedulerLock.WriterLockAsync();
         if (triggersToRemove.Count > 0)
             await scheduler.UnscheduleJobs(triggersToRemove);
         _logger.Trace("Unscheduled {Count} triggers.", triggersToRemove.Count);
-        await scheduler.ScheduleJobs(collection, false);
+        foreach (var (jobKey, priority) in triggersToPromote)
+            await PromoteExistingTriggers(scheduler, jobKey, priority);
+        if (collection.Count > 0)
+            await scheduler.ScheduleJobs(collection, false);
         _logger.Trace("Scheduled {Count} jobs in {Time}.", collection.Count, DateTimeOffset.UtcNow - time);
+    }
+
+    private static async Task PromoteExistingTriggers(IScheduler scheduler, JobKey jobKey, int requestedPriority)
+    {
+        var triggers = await scheduler.GetTriggersOfJob(jobKey);
+        foreach (var trigger in triggers)
+        {
+            if (trigger.Priority >= requestedPriority)
+                continue;
+
+            var state = await scheduler.GetTriggerState(trigger.Key);
+            if (state is not TriggerState.Normal)
+                continue;
+
+            var promotedTrigger = trigger.GetTriggerBuilder()
+                .WithPriority(requestedPriority)
+                .Build();
+            await scheduler.RescheduleJob(trigger.Key, promotedTrigger);
+            _logger.Trace("Promoted {JobName} trigger {TriggerName} from priority {OldPriority} to {NewPriority}.", jobKey, trigger.Key, trigger.Priority, requestedPriority);
+        }
     }
 
     /// <summary>
